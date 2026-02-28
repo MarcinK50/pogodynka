@@ -13,7 +13,7 @@ location_id = 0
 lat = '50.552494'
 lon = '16.689344'
 
-update_rate = 15
+update_rate = 15 # update rate between measurements in seconds
 log_status_ok = 10 # send status OK info to server every 10 measures
 max_log_filesize = 10000 # if log filesize exceeds 10000 bytes new file will be created
 status_led = True # or False to turn LEDs off
