@@ -6,8 +6,12 @@ import ubinascii
 import os
 import ntptime, time
 import gc
+from sys import exit
 
-DO_DEBUG = True
+LOG_LEVEL = config.log_level
+LOG_STATUS_OK = config.log_status_ok
+LOG_DESTINATION = config.log_destination
+MAX_LOG_FILESIZE = config.max_log_filesize
 
 SSID = config.ssid
 PASSWORD = config.password
@@ -17,10 +21,6 @@ QUESTDB_PASSWORD = config.questdb_password
 ID = config.location_id
 IP, PORT = config.server_ip, config.server_port
 UPDATE_RATE = config.update_rate
-LOG_STATUS_OK = config.log_status_ok
-MAX_LOG_FILESIZE = config.max_log_filesize
-lat = config.lat
-lon = config.lon
 url = f"http://{IP}:{PORT}/exec"
 
 power_led = Pin(10, Pin.OUT)
@@ -41,32 +41,27 @@ pms5003 = PMS5003(
 if config.status_led: power_led.value(1)
 
 def connect_to_wifi(ssid,password):
-    if DO_DEBUG:
-        print('SSID: ', ssid)
-        print('Pass: ', password)
+    if LOG_LEVEL <= 0:
+        print('[INF] SSID: ', ssid)
+        print('[INF] Pass: ', password)
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
-    if DO_DEBUG:    
+    if LOG_LEVEL <= 0:    
         mac = ubinascii.hexlify(wlan.config('mac'),':').decode()
-        print('MAC: ', mac)
-        for w in wlan.scan():
-            print(' * ', w[0].decode())        
+        print('[INF] MAC: ', mac)
     
     wlan.connect(SSID, PASSWORD)
     connection_timeout = config.wifi_timeout
-    print('Connecting', end='')
     while connection_timeout > 0:
         if wlan.status() >= 3:
             break
         connection_timeout -= 1
-        print('.', end='')
         utime.sleep(1)
     
     if wlan.status() != 3:
         log(2, 'Wi-Fi Connection error!')
         raise RuntimeError('Connection error')
     else:
-        print('Connection successful!')
         try:
             ntptime.host = "0.pool.ntp.org"
             ntptime.settime()
@@ -76,19 +71,19 @@ def connect_to_wifi(ssid,password):
         log(0, 'Wi-Fi Connection successful!')
         if config.status_led: wifi_led.value(1)
         network_info = wlan.ifconfig()
-        if DO_DEBUG:
-            print('IP:', network_info[0])
+        if LOG_LEVEL <= 0:
+            print('[INF] IP:', network_info[0])
+            log(0, f'IP: {network_info[0]}')
        
 def get_temperature():
     try:
         data = sensor.measure()
         temp = sensor.temperature()
         hum = sensor.humidity()
-        print('Reading dht22 success!')
-        print([temp,hum])
+        if LOG_LEVEL <= 0:
+            log(0, f'Reading DHT22 succes! Temperature: {temp} Humidity: {hum}')
         return [temp, hum]
     except:
-        print('Error reading dht22!')
         log(2, 'No data from DHT22')
         return ['NULL', 'NULL']
 
@@ -98,20 +93,23 @@ def get_pollution():
         pm1 = pms.data[0]
         pm25 = pms.data[1]
         pm10 = pms.data[2]
-        print('Reading pms5003 success!') 
-        print([pm1, pm25, pm10])
+        if LOG_LEVEL <= 0:
+            log(0, f'Reading PMS5003 succes! PM1: {pm1} PM2.5: {pm25} PM10: {pm10}')
         return [pm1, pm25, pm10]
     except:
-        print('Error reading pms5003!')
         log(2, 'No data from PMS5003')
         return ['NULL', 'NULL', 'NULL']
     
+### Logging codes:
+### 0 - [INF]   
+### 1 - [WARN]
+### 2 - [ERR]
 def log(code, message):
     timestamp = int(f'{time.time()}000000') # TODO: to convert timestamp from NTP to nanoseconds format, this is very sketchy, make it better
     
     log_filename = 'log-0.txt'
     log_files = []
-    directory = os.listdir()
+    directory = os.listdir(LOG_DESTINATION)
     for f in directory:
         if f.startswith('log'):
             if os.stat(f)[6] > MAX_LOG_FILESIZE:
@@ -130,22 +128,25 @@ def log(code, message):
     size = stat[1] * stat[2]
     free = stat[0] * stat[3]
     used = size - free
-    print(f"Memory usage: {used/size*100}%")
     
     if used/size*100 > 80:
-        print("Memory used too much! Deleting oldest logs")
         for log_number in log_files:
             os.remove(f'log-{log_number}.txt')
-            
-    file = open(log_filename, "a")
-    file.write(f'{timestamp}, {code}, {message}\n')
-    file.close()
+            if LOG_LEVEL <= 1:
+                log(1, 'Memory usage exceeded, cleaning up old logs')
     
+    try:
+        file = open(f'{LOG_DESTINATION}/{log_filename}', "a")
+    except:
+        print('[ERR] Configuration error - log location is unreachable - create directory!')
+        exit()
+    tm = time.localtime()
+    st = f'{tm[0]:04d}-{tm[1]:02d}-{tm[2]:02d} {tm[3]:02d}-{tm[4]:02d}-{tm[5]:02d}'    
+    file.write(f'{st}, {code}, {message}\n')
+    file.close()
+       
     query = f"INSERT INTO log (id,timestamp,code,message) VALUES ({ID},{timestamp},{str(code)},'{str(message)}')"
     log_url = url+"?query="+url_encode(query)
-    if DO_DEBUG:
-        print("[LOG] Executing query : ")
-        print(log_url)
     try:
         requests.get(url=log_url, auth=(QUESTDB_USER, QUESTDB_PASSWORD))
         return 0
@@ -167,12 +168,10 @@ def url_encode(string):
 def send_results(ID,temperature, humidity, pm1, pm25, pm10):
     gc.collect()
     query = f"INSERT INTO sensors(id,temperature,humidity,pm1,pm25,pm10,timestamp) VALUES('{ID}',{str(temperature)},{str(humidity)},{str(pm1)},{str(pm25)},{str(pm10)},{time.time()}000000)"
-    full_url = url+"?query="+url_encode(query)
+    full_url = url+"?query="+url_encode(query)    
     
-    
-    if DO_DEBUG:
-        print("Executing query : ")
-        print(full_url)
+    if LOG_LEVEL <= 0:
+        log(0, f"Executing query: {full_url}")
     
     try:
         requests.get(url=full_url, auth=(QUESTDB_USER, QUESTDB_PASSWORD))
@@ -192,7 +191,6 @@ def main():
         response = send_results(ID,temperature, humidity, pm1, pm25, pm10)
         while response != 0:
             response = send_results(ID,temperature, humidity, pm1, pm25, pm10)
-            print("Sending : ",response)
             utime.sleep(1)
         if config.status_led:
             data_led.value(1)
@@ -206,3 +204,4 @@ def main():
         utime.sleep(UPDATE_RATE)
 
 main()
+
