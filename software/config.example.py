@@ -11,8 +11,12 @@ questdb_password = '1a2b3c4d5E'
 
 location_id = 0
 
+<<<<<<< HEAD
+update_rate = 15 # update rate between measurements in seconds
+=======
 update_rate = 15
 
+>>>>>>> origin/main
 log_status_ok = 10 # send status OK info to server every 10 measures
 log_level = 0 #   LOG_LEVEL - 0 - [INF], [WARN] & [ERR]
                 #  1 - [WARN] & [ERR]
