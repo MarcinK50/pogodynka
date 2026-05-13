@@ -8,14 +8,13 @@ from datetime import datetime
 # =====================================
 
 # QuestDB config
-QUESTDB_URL = "http://budzow.hack:9000/exec"
+QUESTDB_URL = "http://kir.net.pl:9000/exec"
 QUESTDB_USER = "admin"
 QUESTDB_PASS = "B4Ve2PdM!Zwd"
 
 # ESA API config
 ESA_API_URL = "https://esa.nask.pl/api/data/id/1381"
-ESA_BEARER_TOKEN = "eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiJmYzI2Y2ZkYi0yYmZlLTRiMmQtYTM1Ni04NTk2ZDViMzc4YjciLCJpc3MiOiJFU0EiLCJzdWIiOiJlc2EubmFzay5wbCIsImlhdCI6MTc3MzI0MzI1MCwiZXhwIjoxNzczNDE2MDUwLCJBdXRob3JpdGllcyI6WyJTTU9HX1BBR0UiXX0.GbMsbYTPenjwxSwERHigqToLChPNkIUF13sAtL1jloD1qZo5wi-6JPig97va9ekaE3UZLClWr-L97h1CjRqtyQ"
-
+ESA_BEARER_TOKEN = "eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiI4YTFiZjc4YS0xYTkwLTQyMDQtYTFkNS0zZTM4NTdkOGJiNGYiLCJpc3MiOiJFU0EiLCJzdWIiOiJlc2EubmFzay5wbCIsImlhdCI6MTc3ODY4MzQ0NywiZXhwIjoxNzc4ODU2MjQ3LCJBdXRob3JpdGllcyI6WyJTTU9HX1BBR0UiXX0.CrtOxM8kfne89tOsHaEp65fngTcmCYX4t9d4isCI4U2hsV5dibWdNdMVw5jrVpLEsCSQHtdd7jTu8CRhevuQNA"
 OUTPUT_FILE = "sensor_data.csv"
 INTERVAL_SECONDS = 30
 
