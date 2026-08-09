@@ -26,11 +26,11 @@ url = f"http://{IP}:{PORT}/exec"
 power_led = Pin(10, Pin.OUT)
 wifi_led = Pin(11, Pin.OUT)
 data_led = Pin(12, Pin.OUT)
-power_led.value(0)
+power_led.value(1)
 wifi_led.value(0)
 data_led.value(0)
 
-sensor = dht.DHT22(Pin(16))
+sensor = dht.DHT22(Pin(7))
 pms5003 = PMS5003(
     uart=UART(1, tx=Pin(8), rx=Pin(9), baudrate=9600),
     pin_enable=Pin(3),
@@ -59,23 +59,26 @@ def connect_to_wifi(ssid,password):
         utime.sleep(1)
     
     if wlan.status() != 3:
-        log(2, 'Wi-Fi Connection error!')
+        log(2, '[ERR] Wi-Fi Connection error!')
         raise RuntimeError('Connection error')
     else:
         try:
-            ntptime.host = "0.pool.ntp.org"
+            ntptime.host = "pl.pool.ntp.org"
             ntptime.settime()
         except:
-            ntptime.host = "1.pool.ntp.org"
-            ntptime.settime()
-        log(0, 'Wi-Fi Connection successful!')
+#            ntptime.host = "1.pool.ntp.org"
+#            ntptime.settime()
+            pass
+        log(0, '[INF] Wi-Fi Connection successful!')
         if config.status_led: wifi_led.value(1)
         network_info = wlan.ifconfig()
+        
         if LOG_LEVEL <= 0:
             print('[INF] IP:', network_info[0])
             log(0, f'IP: {network_info[0]}')
        
 def get_temperature():
+    print('[INF] Read temperature')
     try:
         data = sensor.measure()
         temp = sensor.temperature()
@@ -88,6 +91,7 @@ def get_temperature():
         return ['NULL', 'NULL']
 
 def get_pollution():
+    print('[INF] Read pollution')
     try:
         pms = pms5003.read()
         pm1 = pms.data[0]
@@ -105,6 +109,7 @@ def get_pollution():
 ### 1 - [WARN]
 ### 2 - [ERR]
 def log(code, message):
+    print(message)
     timestamp = int(f'{time.time()}000000') # TODO: to convert timestamp from NTP to nanoseconds format, this is very sketchy, make it better
     
     log_filename = 'log-0.txt'
